@@ -3,10 +3,12 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/data/api_client.dart';
 import '../../../shared/domain/entities/admin_user.dart';
 import '../../domain/entities/admin_entities.dart';
 import '../../domain/repositories/admin_repository.dart';
 import '../../../../../../../app_config.dart';
+import 'admin_http_repository.dart';
 
 Future<void> _delay([int ms = 400]) =>
     Future.delayed(Duration(milliseconds: ms));
@@ -484,22 +486,32 @@ final _mockAuctionRepo = MockAuctionRepository();
 final _mockComplaintRepo = MockComplaintRepository();
 
 final opsRepositoryProvider = Provider<OpsRepository>(
-  (_) => AppConfig.useMock ? _mockOpsRepo : _mockOpsRepo,
+  (_) => AppConfig.useMock
+      ? _mockOpsRepo
+      : HttpOpsRepository(ApiClient.instance),
 );
 
 final verificationRepositoryProvider = Provider<VerificationRepository>(
-  (_) => AppConfig.useMock ? _mockVerificationRepo : _mockVerificationRepo,
+  (_) => AppConfig.useMock
+      ? _mockVerificationRepo
+      : HttpVerificationRepository(ApiClient.instance),
 );
 
 final transactionRepositoryProvider = Provider<TransactionRepository>(
-  (_) => AppConfig.useMock ? _mockTransactionRepo : _mockTransactionRepo,
+  (_) => AppConfig.useMock
+      ? _mockTransactionRepo
+      : HttpTransactionRepository(ApiClient.instance),
 );
 
 final auctionRepositoryProvider = Provider<AuctionRepository>(
-  (_) => AppConfig.useMock ? _mockAuctionRepo : _mockAuctionRepo,
+  (_) => AppConfig.useMock
+      ? _mockAuctionRepo
+      : HttpAuctionRepository(ApiClient.instance),
 );
 
 final complaintRepositoryProvider = Provider<ComplaintRepository>(
-  (_) => AppConfig.useMock ? _mockComplaintRepo : _mockComplaintRepo,
+  (_) => AppConfig.useMock
+      ? _mockComplaintRepo
+      : HttpComplaintRepository(ApiClient.instance),
 );
 

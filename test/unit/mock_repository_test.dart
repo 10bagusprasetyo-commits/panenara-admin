@@ -4,7 +4,6 @@ import 'package:panenara/features/admin_web/admin/data/repositories/admin_mock_r
 import 'package:panenara/features/admin_web/admin/domain/entities/admin_entities.dart';
 import 'package:panenara/features/admin_web/shared/domain/entities/admin_user.dart';
 import 'package:panenara/features/admin_web/super_admin/data/repositories/super_admin_mock_repository.dart';
-import 'package:panenara/features/admin_web/super_admin/domain/entities/super_admin_entities.dart';
 
 void main() {
   group('MockOpsRepository', () {

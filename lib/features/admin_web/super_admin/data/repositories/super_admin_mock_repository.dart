@@ -3,10 +3,12 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../shared/data/api_client.dart';
 import '../../../shared/domain/entities/admin_user.dart';
 import '../../domain/entities/super_admin_entities.dart';
 import '../../domain/repositories/super_admin_repository.dart';
 import '../../../../../../../app_config.dart';
+import 'super_admin_http_repository.dart';
 
 // ─── Mock Super Dashboard ─────────────────────────────────────────────────────
 
@@ -539,27 +541,39 @@ final _mockSettingsRepo = MockSettingsRepository();
 final _mockAuditLogRepo = MockAuditLogRepository();
 
 final superAdminRepositoryProvider = Provider<SuperAdminRepository>(
-  (_) => AppConfig.useMock ? _mockSuperAdminRepo : _mockSuperAdminRepo,
+  (_) => AppConfig.useMock
+      ? _mockSuperAdminRepo
+      : HttpSuperAdminRepository(ApiClient.instance),
 );
 
 final adminManagementRepositoryProvider =
     Provider<AdminManagementRepository>(
-  (_) => AppConfig.useMock ? _mockAdminMgmtRepo : _mockAdminMgmtRepo,
+  (_) => AppConfig.useMock
+      ? _mockAdminMgmtRepo
+      : HttpAdminManagementRepository(ApiClient.instance),
 );
 
 final superUserRepositoryProvider = Provider<SuperUserRepository>(
-  (_) => AppConfig.useMock ? _mockSuperUserRepo : _mockSuperUserRepo,
+  (_) => AppConfig.useMock
+      ? _mockSuperUserRepo
+      : HttpSuperUserRepository(ApiClient.instance),
 );
 
 final reportRepositoryProvider = Provider<ReportRepository>(
-  (_) => AppConfig.useMock ? _mockReportRepo : _mockReportRepo,
+  (_) => AppConfig.useMock
+      ? _mockReportRepo
+      : HttpReportRepository(ApiClient.instance),
 );
 
 final settingsRepositoryProvider = Provider<SettingsRepository>(
-  (_) => AppConfig.useMock ? _mockSettingsRepo : _mockSettingsRepo,
+  (_) => AppConfig.useMock
+      ? _mockSettingsRepo
+      : HttpSettingsRepository(ApiClient.instance),
 );
 
 final auditLogRepositoryProvider = Provider<AuditLogRepository>(
-  (_) => AppConfig.useMock ? _mockAuditLogRepo : _mockAuditLogRepo,
+  (_) => AppConfig.useMock
+      ? _mockAuditLogRepo
+      : HttpAuditLogRepository(ApiClient.instance),
 );
 
