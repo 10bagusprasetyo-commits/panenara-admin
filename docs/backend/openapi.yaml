@@ -1,0 +1,1648 @@
+openapi: "3.0.3"
+info:
+  title: Panenara Admin API
+  version: "1.0.0"
+  description: |
+    REST API untuk panel admin Panenara — platform agritech lelang komoditas petani.
+    Semua endpoint (kecuali auth/login dan auth/refresh) memerlukan Bearer JWT.
+  contact:
+    name: Tim Backend Panenara
+    email: dev@panenara.id
+
+servers:
+  - url: https://api.panenara.id/v1
+    description: Production
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Auth
+    description: Autentikasi dan manajemen sesi
+  - name: Super Admin
+    description: Endpoint khusus role super_admin
+  - name: Admin
+    description: Endpoint untuk role admin (ops)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────────────────────────────────────
+paths:
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login admin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: bagas@panenara.id
+                password:
+                  type: string
+                  format: password
+                  example: Admin123!
+      responses:
+        "200":
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+                  example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refresh...
+      responses:
+        "200":
+          description: Token baru
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout (invalidasi refresh token)
+      responses:
+        "200":
+          description: Logout berhasil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: Logout berhasil.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Profil pengguna yang sedang login
+      responses:
+        "200":
+          description: Data user saat ini
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/CurrentUser"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ── Super Admin ───────────────────────────────────────────────────────────
+  /admin/dashboard/super:
+    get:
+      tags: [Super Admin]
+      summary: Dashboard ringkasan super admin
+      responses:
+        "200":
+          description: Data ringkasan dashboard
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/SuperDashboard"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/admins:
+    get:
+      tags: [Super Admin]
+      summary: Daftar akun admin
+      parameters:
+        - $ref: "#/components/parameters/QuerySearch"
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryPageSize"
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [admin, super_admin]
+      responses:
+        "200":
+          description: Daftar admin
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AdminAccount"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Super Admin]
+      summary: Tambah akun admin baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAdminRequest"
+      responses:
+        "201":
+          description: Admin berhasil dibuat
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AdminAccount"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /admin/admins/{id}:
+    patch:
+      tags: [Super Admin]
+      summary: Update data admin
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAdminRequest"
+      responses:
+        "200":
+          description: Admin diperbarui
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AdminAccount"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/admins/{id}/status:
+    patch:
+      tags: [Super Admin]
+      summary: Aktifkan / nonaktifkan admin
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [active, inactive, suspended]
+                  example: inactive
+      responses:
+        "200":
+          description: Status admin diperbarui
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AdminAccount"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/users:
+    get:
+      tags: [Super Admin]
+      summary: Daftar semua pengguna aplikasi
+      parameters:
+        - $ref: "#/components/parameters/QuerySearch"
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryPageSize"
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [petani, pembeli, pengamat]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, suspended, pending]
+      responses:
+        "200":
+          description: Daftar pengguna
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AppUser"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/users/{id}:
+    get:
+      tags: [Super Admin]
+      summary: Detail pengguna
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: Detail pengguna
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AppUser"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/users/{id}/status:
+    patch:
+      tags: [Super Admin]
+      summary: Update status pengguna
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [active, inactive, suspended]
+                  example: suspended
+                reason:
+                  type: string
+                  example: Pelanggaran kebijakan platform.
+      responses:
+        "200":
+          description: Status pengguna diperbarui
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AppUser"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/reports/summary:
+    get:
+      tags: [Super Admin]
+      summary: Ringkasan laporan platform
+      responses:
+        "200":
+          description: Data ringkasan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      total_users:
+                        type: integer
+                        example: 1240
+                      total_transactions:
+                        type: integer
+                        example: 320
+                      total_volume_idr:
+                        type: number
+                        format: double
+                        example: 4850000000
+                      total_auctions:
+                        type: integer
+                        example: 87
+                      total_complaints:
+                        type: integer
+                        example: 24
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/reports/monthly-volume:
+    get:
+      tags: [Super Admin]
+      summary: Volume transaksi bulanan
+      parameters:
+        - name: year
+          in: query
+          schema:
+            type: integer
+            example: 2025
+      responses:
+        "200":
+          description: Data volume per bulan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        month:
+                          type: string
+                          example: "2025-01"
+                        volume_idr:
+                          type: number
+                          format: double
+                          example: 320000000
+                        transaction_count:
+                          type: integer
+                          example: 28
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/reports/top-commodities:
+    get:
+      tags: [Super Admin]
+      summary: Komoditas teratas berdasarkan volume
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Daftar komoditas teratas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        commodity_name:
+                          type: string
+                          example: Padi IR64
+                        total_volume_kg:
+                          type: number
+                          example: 85000
+                        total_value_idr:
+                          type: number
+                          example: 680000000
+                        transaction_count:
+                          type: integer
+                          example: 42
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/reports/export:
+    get:
+      tags: [Super Admin]
+      summary: Ekspor laporan ke file (CSV / XLSX)
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, xlsx]
+            default: xlsx
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+            example: "2025-01-01"
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+            example: "2025-12-31"
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [transactions, auctions, users, complaints]
+            default: transactions
+      responses:
+        "200":
+          description: File laporan
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/settings:
+    get:
+      tags: [Super Admin]
+      summary: Ambil semua pengaturan sistem
+      responses:
+        "200":
+          description: Daftar pengaturan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SystemSetting"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    put:
+      tags: [Super Admin]
+      summary: Update satu atau beberapa pengaturan sistem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Map key → value (bebas, sesuai key yang ada)
+              additionalProperties: true
+              example:
+                platform_fee_pct: 2.5
+                maintenance_mode: false
+                support_email: support@panenara.id
+      responses:
+        "200":
+          description: Pengaturan diperbarui
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SystemSetting"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/audit-logs:
+    get:
+      tags: [Super Admin]
+      summary: Log audit aksi admin
+      parameters:
+        - $ref: "#/components/parameters/QuerySearch"
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryPageSize"
+        - name: module
+          in: query
+          schema:
+            type: string
+            example: farmer_verification
+      responses:
+        "200":
+          description: Daftar log audit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditLog"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ── Admin (Ops) ───────────────────────────────────────────────────────────
+  /admin/dashboard/ops:
+    get:
+      tags: [Admin]
+      summary: Dashboard operasional admin
+      responses:
+        "200":
+          description: Data dashboard ops
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/OpsDashboard"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/farmer-verifications:
+    get:
+      tags: [Admin]
+      summary: Daftar pengajuan verifikasi petani
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [waiting, needs_revision, verified, rejected]
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryPageSize"
+      responses:
+        "200":
+          description: Daftar verifikasi petani
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FarmerVerification"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/farmer-verifications/{id}:
+    get:
+      tags: [Admin]
+      summary: Detail pengajuan verifikasi petani
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: Detail verifikasi petani
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/FarmerVerification"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/farmer-verifications/{id}/approve:
+    post:
+      tags: [Admin]
+      summary: Setujui verifikasi petani
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: Verifikasi disetujui
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/FarmerVerification"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Status tidak memungkinkan aksi ini
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /admin/farmer-verifications/{id}/request-revision:
+    post:
+      tags: [Admin]
+      summary: Minta revisi dokumen petani
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [note]
+              properties:
+                note:
+                  type: string
+                  example: Foto KTP kurang jelas, harap upload ulang.
+      responses:
+        "200":
+          description: Permintaan revisi berhasil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/FarmerVerification"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/farmer-verifications/{id}/reject:
+    post:
+      tags: [Admin]
+      summary: Tolak verifikasi petani
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  example: Dokumen palsu atau tidak sesuai.
+      responses:
+        "200":
+          description: Verifikasi ditolak
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/FarmerVerification"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/transactions:
+    get:
+      tags: [Admin]
+      summary: Daftar transaksi
+      parameters:
+        - $ref: "#/components/parameters/QuerySearch"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [success, awaiting_payment, failed, dispute]
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryPageSize"
+      responses:
+        "200":
+          description: Daftar transaksi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Transaction"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/transactions/{id}:
+    get:
+      tags: [Admin]
+      summary: Detail transaksi
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: Detail transaksi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Transaction"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/auctions:
+    get:
+      tags: [Admin]
+      summary: Daftar lelang
+      parameters:
+        - $ref: "#/components/parameters/QuerySearch"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, active, awaiting_payment, ended, cancelled]
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryPageSize"
+      responses:
+        "200":
+          description: Daftar lelang
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Auction"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/auctions/{id}:
+    get:
+      tags: [Admin]
+      summary: Detail lelang
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: Detail lelang beserta riwayat bid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Auction"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/complaints:
+    get:
+      tags: [Admin]
+      summary: Daftar pengaduan
+      parameters:
+        - $ref: "#/components/parameters/QuerySearch"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, in_progress, resolved, escalated]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high]
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryPageSize"
+      responses:
+        "200":
+          description: Daftar pengaduan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Complaint"
+                  meta:
+                    $ref: "#/components/schemas/PaginationMeta"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /admin/complaints/{id}:
+    get:
+      tags: [Admin]
+      summary: Detail pengaduan
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: Detail pengaduan beserta balasan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Complaint"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      tags: [Admin]
+      summary: Update status / penugasan pengaduan
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [open, in_progress, resolved, escalated]
+                  example: in_progress
+                priority:
+                  type: string
+                  enum: [low, medium, high]
+                  example: high
+                assigned_to:
+                  type: string
+                  format: uuid
+                  example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+      responses:
+        "200":
+          description: Pengaduan diperbarui
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Complaint"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/complaints/{id}/replies:
+    post:
+      tags: [Admin]
+      summary: Balas pengaduan
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+                  example: Kami telah menerima laporan Anda dan sedang menindaklanjuti.
+      responses:
+        "201":
+          description: Balasan berhasil dikirim
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/ComplaintReply"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# COMPONENTS
+# ─────────────────────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    PathId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+    QuerySearch:
+      name: q
+      in: query
+      schema:
+        type: string
+      description: Kata kunci pencarian
+    QueryPage:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    QueryPageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+
+  responses:
+    Unauthorized:
+      description: Token tidak valid atau tidak ada
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Token tidak valid atau sudah kedaluwarsa.
+              fields: {}
+    Forbidden:
+      description: Hak akses tidak mencukupi
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            error:
+              code: FORBIDDEN
+              message: Anda tidak memiliki izin untuk mengakses resource ini.
+              fields: {}
+    NotFound:
+      description: Resource tidak ditemukan
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            error:
+              code: NOT_FOUND
+              message: Data tidak ditemukan.
+              fields: {}
+    ValidationError:
+      description: Validasi request gagal
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Input tidak valid.
+              fields:
+                email: Format email tidak valid.
+                password: Password minimal 8 karakter.
+
+  schemas:
+    # ── Envelope helpers ──────────────────────────────────────────────────
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 100
+        totalPages:
+          type: integer
+          example: 5
+
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: NOT_FOUND
+            message:
+              type: string
+              example: Data tidak ditemukan.
+            fields:
+              type: object
+              additionalProperties:
+                type: string
+
+    # ── Auth ──────────────────────────────────────────────────────────────
+    CurrentUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        name:
+          type: string
+          example: Bagas Nugroho
+        email:
+          type: string
+          format: email
+          example: bagas@panenara.id
+        role:
+          type: string
+          enum: [super_admin, admin]
+          example: super_admin
+
+    LoginResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhMWIyYzNkNCIsInJvbGUiOiJzdXBlcl9hZG1pbiIsImlhdCI6MTcwMDAwMDAwMCwiZXhwIjoxNzAwMDAwOTAwfQ.signature
+            refresh_token:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.refresh...
+            user:
+              $ref: "#/components/schemas/CurrentUser"
+
+    RefreshResponse:
+      type: object
+      properties:
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.new_access...
+            refresh_token:
+              type: string
+              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.new_refresh...
+
+    # ── Admin Account ─────────────────────────────────────────────────────
+    AdminAccount:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: b2c3d4e5-f6a7-8901-bcde-f12345678901
+        name:
+          type: string
+          example: Rina Lestari
+        email:
+          type: string
+          format: email
+          example: rina@panenara.id
+        role:
+          type: string
+          enum: [admin, super_admin]
+          example: admin
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+          example: active
+        access_level:
+          type: string
+          enum: [full, read_only, limited]
+          example: full
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-03-15T08:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-01-10T14:30:00Z"
+
+    CreateAdminRequest:
+      type: object
+      required: [name, email, password, access_level]
+      properties:
+        name:
+          type: string
+          example: Doni Prasetyo
+        email:
+          type: string
+          format: email
+          example: doni@panenara.id
+        password:
+          type: string
+          format: password
+          example: Admin123!
+        access_level:
+          type: string
+          enum: [full, read_only, limited]
+          example: limited
+
+    UpdateAdminRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: Doni Prasetyo S.T.
+        access_level:
+          type: string
+          enum: [full, read_only, limited]
+          example: full
+
+    # ── App User ──────────────────────────────────────────────────────────
+    AppUser:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: c3d4e5f6-a7b8-9012-cdef-123456789012
+        name:
+          type: string
+          example: Budi Santoso
+        email:
+          type: string
+          format: email
+          example: budi@example.com
+        role:
+          type: string
+          enum: [petani, pembeli, pengamat]
+          example: petani
+        status:
+          type: string
+          enum: [active, inactive, suspended, pending]
+          example: active
+        verification_status:
+          type: string
+          enum: [waiting, needs_revision, verified, rejected]
+          nullable: true
+          description: Hanya untuk role petani
+          example: verified
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-06-01T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-02-20T09:15:00Z"
+
+    # ── Farmer Verification ───────────────────────────────────────────────
+    FarmerDocument:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d4e5f6a7-b8c9-0123-def0-234567890123
+        type:
+          type: string
+          enum: [ktp, selfie, lahan]
+          example: ktp
+        url:
+          type: string
+          format: uri
+          example: https://cdn.panenara.id/docs/ktp_budi.jpg
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-01-05T07:30:00Z"
+
+    FarmerVerification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: e5f6a7b8-c9d0-1234-ef01-345678901234
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+              example: c3d4e5f6-a7b8-9012-cdef-123456789012
+            name:
+              type: string
+              example: Budi Santoso
+            email:
+              type: string
+              format: email
+              example: budi@example.com
+        verification_status:
+          type: string
+          enum: [waiting, needs_revision, verified, rejected]
+          example: waiting
+        review_note:
+          type: string
+          nullable: true
+          example: null
+        reviewed_by:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        reviewed_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/FarmerDocument"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-03-01T08:00:00Z"
+
+    # ── Auction ───────────────────────────────────────────────────────────
+    BidItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        bidder_name:
+          type: string
+          example: PT Maju Bersama
+        amount:
+          type: number
+          format: double
+          example: 7500000
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-04-10T13:00:00Z"
+
+    Auction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: f6a7b8c9-d0e1-2345-f012-456789012345
+        farmer:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: Budi Santoso
+        commodity:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: Padi IR64
+            unit:
+              type: string
+              example: kg
+        quantity:
+          type: number
+          example: 1000
+        unit_price_start:
+          type: number
+          format: double
+          example: 6500
+        status:
+          type: string
+          enum: [draft, active, awaiting_payment, ended, cancelled]
+          example: active
+        ends_at:
+          type: string
+          format: date-time
+          example: "2025-04-15T18:00:00Z"
+        bids:
+          type: array
+          items:
+            $ref: "#/components/schemas/BidItem"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-04-08T09:00:00Z"
+
+    # ── Transaction ───────────────────────────────────────────────────────
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: a7b8c9d0-e1f2-3456-0123-567890123456
+        auction_id:
+          type: string
+          format: uuid
+          nullable: true
+          example: f6a7b8c9-d0e1-2345-f012-456789012345
+        buyer:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: PT Maju Bersama
+        seller:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: Budi Santoso
+        commodity:
+          type: string
+          example: Padi IR64
+        quantity:
+          type: number
+          example: 1000
+        total_amount:
+          type: number
+          format: double
+          example: 7500000
+        status:
+          type: string
+          enum: [success, awaiting_payment, failed, dispute]
+          example: success
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-04-16T10:30:00Z"
+
+    # ── Complaint ─────────────────────────────────────────────────────────
+    ComplaintReply:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: b8c9d0e1-f2a3-4567-1234-678901234567
+        complaint_id:
+          type: string
+          format: uuid
+        author:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: Rina Lestari
+            role:
+              type: string
+              example: admin
+        body:
+          type: string
+          example: Kami telah menerima laporan Anda dan sedang menindaklanjuti.
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-05-01T11:00:00Z"
+
+    Complaint:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: c9d0e1f2-a3b4-5678-2345-789012345678
+        reporter:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: Ahmad Fauzi
+            role:
+              type: string
+              example: petani
+        category:
+          type: string
+          example: Pembayaran tidak diterima
+        summary:
+          type: string
+          example: Pembayaran lelang belum masuk setelah 7 hari
+        description:
+          type: string
+          example: Saya memenangkan lelang pada 16 April 2025 namun dana belum diterima.
+        priority:
+          type: string
+          enum: [low, medium, high]
+          example: high
+        status:
+          type: string
+          enum: [open, in_progress, resolved, escalated]
+          example: open
+        assigned_to:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: Rina Lestari
+        replies:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComplaintReply"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-04-23T09:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-05-01T11:00:00Z"
+
+    # ── System Setting ────────────────────────────────────────────────────
+    SystemSetting:
+      type: object
+      properties:
+        key:
+          type: string
+          example: platform_fee_pct
+        value:
+          description: Nilai bebas (jsonb) — bisa angka, string, boolean, objek
+          example: 2.5
+        updated_by:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+              example: Bagas Nugroho
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-01-01T00:00:00Z"
+
+    # ── Audit Log ─────────────────────────────────────────────────────────
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: d0e1f2a3-b4c5-6789-3456-890123456789
+        actor_id:
+          type: string
+          format: uuid
+          nullable: true
+          example: b2c3d4e5-f6a7-8901-bcde-f12345678901
+        actor_name:
+          type: string
+          example: Rina Lestari
+        action:
+          type: string
+          example: APPROVE_FARMER_VERIFICATION
+        module:
+          type: string
+          example: farmer_verification
+        ip_address:
+          type: string
+          example: "203.0.113.42"
+        meta:
+          type: object
+          description: Data tambahan terkait aksi (bebas)
+          example:
+            farmer_profile_id: e5f6a7b8-c9d0-1234-ef01-345678901234
+            farmer_name: Budi Santoso
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-04-10T10:05:00Z"
+
+    # ── Dashboards ────────────────────────────────────────────────────────
+    SuperDashboard:
+      type: object
+      properties:
+        total_users:
+          type: integer
+          example: 1240
+        total_admins:
+          type: integer
+          example: 8
+        total_transactions_this_month:
+          type: integer
+          example: 42
+        volume_this_month_idr:
+          type: number
+          format: double
+          example: 650000000
+        active_auctions:
+          type: integer
+          example: 12
+        open_complaints:
+          type: integer
+          example: 5
+        pending_verifications:
+          type: integer
+          example: 18
+        recent_audit_logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLog"
+
+    OpsDashboard:
+      type: object
+      properties:
+        pending_verifications:
+          type: integer
+          example: 18
+        active_auctions:
+          type: integer
+          example: 12
+        open_complaints:
+          type: integer
+          example: 5
+        in_progress_complaints:
+          type: integer
+          example: 3
+        awaiting_payment_transactions:
+          type: integer
+          example: 7
+        recent_farmer_verifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/FarmerVerification"
+        recent_complaints:
+          type: array
+          items:
+            $ref: "#/components/schemas/Complaint"

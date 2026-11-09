@@ -1,0 +1,628 @@
+# Panenara Admin API — HTTP Client File
+# VS Code REST Client / JetBrains HTTP Client
+# Gunakan ekstensi "REST Client" (Huachao Mao) di VS Code
+# atau buka langsung di IntelliJ / WebStorm
+
+@baseUrl = https://api.panenara.id/v1
+@token = PASTE_ACCESS_TOKEN_HERE
+@refreshToken = PASTE_REFRESH_TOKEN_HERE
+@superAdminId = a1b2c3d4-e5f6-7890-abcd-ef1234567890
+@adminId = b2c3d4e5-f6a7-8901-bcde-f12345678901
+@sampleUserId = c3d4e5f6-a7b8-9012-cdef-123456789012
+@sampleFarmerVerifId = e5f6a7b8-c9d0-1234-ef01-345678901234
+@sampleAuctionId = f6a7b8c9-d0e1-2345-f012-456789012345
+@sampleTransactionId = a7b8c9d0-e1f2-3456-0123-567890123456
+@sampleComplaintId = c9d0e1f2-a3b4-5678-2345-789012345678
+
+
+# =============================================================================
+### Auth
+# =============================================================================
+
+### Login - Super Admin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "bagas@panenara.id",
+  "password": "Admin123!"
+}
+
+###
+
+### Login - Admin Ops
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "rina@panenara.id",
+  "password": "Admin123!"
+}
+
+###
+
+### Refresh Token
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refreshToken}}"
+}
+
+###
+
+### Logout
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+###
+
+### Get Current User (Me)
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
+### Super Admin - Dashboard
+# =============================================================================
+
+### Super Admin Dashboard
+GET {{baseUrl}}/admin/dashboard/super
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
+### Super Admin - Admin Management
+# =============================================================================
+
+### Daftar Semua Admin (tanpa filter)
+GET {{baseUrl}}/admin/admins
+Authorization: Bearer {{token}}
+
+###
+
+### Daftar Admin dengan Filter
+GET {{baseUrl}}/admin/admins?q=rina&page=1&pageSize=20&role=admin
+Authorization: Bearer {{token}}
+
+###
+
+### Tambah Admin Baru
+POST {{baseUrl}}/admin/admins
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Doni Prasetyo",
+  "email": "doni@panenara.id",
+  "password": "Admin123!",
+  "access_level": "limited"
+}
+
+###
+
+### Update Data Admin
+PATCH {{baseUrl}}/admin/admins/{{adminId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Rina Lestari S.Kom.",
+  "access_level": "full"
+}
+
+###
+
+### Nonaktifkan Admin
+PATCH {{baseUrl}}/admin/admins/{{adminId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "inactive"
+}
+
+###
+
+### Aktifkan Kembali Admin
+PATCH {{baseUrl}}/admin/admins/{{adminId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "active"
+}
+
+###
+
+### Suspend Admin
+PATCH {{baseUrl}}/admin/admins/{{adminId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "suspended"
+}
+
+
+# =============================================================================
+### Super Admin - User Management
+# =============================================================================
+
+### Daftar Semua Pengguna
+GET {{baseUrl}}/admin/users
+Authorization: Bearer {{token}}
+
+###
+
+### Daftar Pengguna dengan Filter Role
+GET {{baseUrl}}/admin/users?role=petani&status=active&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Daftar Pengguna - Pencarian
+GET {{baseUrl}}/admin/users?q=budi&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Daftar Pengguna - Pembeli Pending
+GET {{baseUrl}}/admin/users?role=pembeli&status=pending&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Detail Pengguna
+GET {{baseUrl}}/admin/users/{{sampleUserId}}
+Authorization: Bearer {{token}}
+
+###
+
+### Suspend Pengguna
+PATCH {{baseUrl}}/admin/users/{{sampleUserId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "suspended",
+  "reason": "Pelanggaran kebijakan platform: penipuan identitas."
+}
+
+###
+
+### Aktifkan Pengguna
+PATCH {{baseUrl}}/admin/users/{{sampleUserId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "active"
+}
+
+
+# =============================================================================
+### Super Admin - Reports
+# =============================================================================
+
+### Ringkasan Laporan Platform
+GET {{baseUrl}}/admin/reports/summary
+Authorization: Bearer {{token}}
+
+###
+
+### Volume Transaksi Bulanan (Tahun 2025)
+GET {{baseUrl}}/admin/reports/monthly-volume?year=2025
+Authorization: Bearer {{token}}
+
+###
+
+### Volume Transaksi Bulanan (Tahun berjalan)
+GET {{baseUrl}}/admin/reports/monthly-volume
+Authorization: Bearer {{token}}
+
+###
+
+### Komoditas Teratas (Top 10)
+GET {{baseUrl}}/admin/reports/top-commodities?limit=10
+Authorization: Bearer {{token}}
+
+###
+
+### Komoditas Teratas (Top 5)
+GET {{baseUrl}}/admin/reports/top-commodities?limit=5
+Authorization: Bearer {{token}}
+
+###
+
+### Ekspor Laporan Transaksi (XLSX)
+GET {{baseUrl}}/admin/reports/export?format=xlsx&type=transactions&from=2025-01-01&to=2025-12-31
+Authorization: Bearer {{token}}
+
+###
+
+### Ekspor Laporan Transaksi (CSV)
+GET {{baseUrl}}/admin/reports/export?format=csv&type=transactions&from=2025-04-01&to=2025-04-30
+Authorization: Bearer {{token}}
+
+###
+
+### Ekspor Data Pengguna
+GET {{baseUrl}}/admin/reports/export?format=xlsx&type=users
+Authorization: Bearer {{token}}
+
+###
+
+### Ekspor Laporan Lelang
+GET {{baseUrl}}/admin/reports/export?format=xlsx&type=auctions&from=2025-01-01&to=2025-12-31
+Authorization: Bearer {{token}}
+
+###
+
+### Ekspor Laporan Pengaduan
+GET {{baseUrl}}/admin/reports/export?format=csv&type=complaints
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
+### Super Admin - System Settings
+# =============================================================================
+
+### Ambil Semua Pengaturan Sistem
+GET {{baseUrl}}/admin/settings
+Authorization: Bearer {{token}}
+
+###
+
+### Update Pengaturan Sistem (satu setting)
+PUT {{baseUrl}}/admin/settings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "platform_fee_pct": 2.5
+}
+
+###
+
+### Update Multiple Pengaturan Sistem
+PUT {{baseUrl}}/admin/settings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "platform_fee_pct": 3.0,
+  "maintenance_mode": false,
+  "support_email": "support@panenara.id",
+  "max_bid_extension_minutes": 15,
+  "min_bid_increment_pct": 1.5
+}
+
+###
+
+### Aktifkan Maintenance Mode
+PUT {{baseUrl}}/admin/settings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "maintenance_mode": true
+}
+
+
+# =============================================================================
+### Super Admin - Audit Logs
+# =============================================================================
+
+### Semua Audit Log (terbaru)
+GET {{baseUrl}}/admin/audit-logs?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Audit Log dengan Filter Module
+GET {{baseUrl}}/admin/audit-logs?module=farmer_verification&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Audit Log dengan Pencarian
+GET {{baseUrl}}/admin/audit-logs?q=APPROVE&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Audit Log Module Settings
+GET {{baseUrl}}/admin/audit-logs?module=settings&page=1&pageSize=50
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
+### Admin (Ops) - Dashboard
+# =============================================================================
+
+### Dashboard Operasional Admin
+GET {{baseUrl}}/admin/dashboard/ops
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
+### Admin (Ops) - Farmer Verifications
+# =============================================================================
+
+### Semua Pengajuan Verifikasi (semua status)
+GET {{baseUrl}}/admin/farmer-verifications?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Verifikasi Menunggu Review
+GET {{baseUrl}}/admin/farmer-verifications?status=waiting&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Verifikasi Perlu Revisi
+GET {{baseUrl}}/admin/farmer-verifications?status=needs_revision&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Verifikasi Sudah Disetujui
+GET {{baseUrl}}/admin/farmer-verifications?status=verified&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Verifikasi Ditolak
+GET {{baseUrl}}/admin/farmer-verifications?status=rejected&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Detail Pengajuan Verifikasi Petani
+GET {{baseUrl}}/admin/farmer-verifications/{{sampleFarmerVerifId}}
+Authorization: Bearer {{token}}
+
+###
+
+### Setujui Verifikasi Petani
+POST {{baseUrl}}/admin/farmer-verifications/{{sampleFarmerVerifId}}/approve
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+###
+
+### Minta Revisi Dokumen Petani
+POST {{baseUrl}}/admin/farmer-verifications/{{sampleFarmerVerifId}}/request-revision
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "note": "Foto KTP kurang jelas dan tidak terbaca. Harap upload ulang dengan pencahayaan yang cukup dan resolusi minimal 1 MP."
+}
+
+###
+
+### Tolak Verifikasi Petani
+POST {{baseUrl}}/admin/farmer-verifications/{{sampleFarmerVerifId}}/reject
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reason": "Dokumen KTP tidak sesuai atau diduga palsu. Verifikasi tidak dapat dilanjutkan."
+}
+
+
+# =============================================================================
+### Admin (Ops) - Transactions
+# =============================================================================
+
+### Daftar Semua Transaksi
+GET {{baseUrl}}/admin/transactions?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Transaksi dengan Filter Status
+GET {{baseUrl}}/admin/transactions?status=awaiting_payment&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Transaksi Dispute
+GET {{baseUrl}}/admin/transactions?status=dispute&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Transaksi dengan Pencarian
+GET {{baseUrl}}/admin/transactions?q=PT+Maju+Bersama&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Detail Transaksi
+GET {{baseUrl}}/admin/transactions/{{sampleTransactionId}}
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
+### Admin (Ops) - Auctions
+# =============================================================================
+
+### Daftar Semua Lelang
+GET {{baseUrl}}/admin/auctions?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Lelang Aktif
+GET {{baseUrl}}/admin/auctions?status=active&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Lelang Menunggu Pembayaran
+GET {{baseUrl}}/admin/auctions?status=awaiting_payment&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Lelang Selesai
+GET {{baseUrl}}/admin/auctions?status=ended&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Lelang Dibatalkan
+GET {{baseUrl}}/admin/auctions?status=cancelled&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Lelang dengan Pencarian Komoditas
+GET {{baseUrl}}/admin/auctions?q=Padi&status=active&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Detail Lelang (termasuk riwayat bid)
+GET {{baseUrl}}/admin/auctions/{{sampleAuctionId}}
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
+### Admin (Ops) - Complaints
+# =============================================================================
+
+### Daftar Semua Pengaduan
+GET {{baseUrl}}/admin/complaints?page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Pengaduan Belum Ditangani
+GET {{baseUrl}}/admin/complaints?status=open&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Pengaduan Prioritas Tinggi
+GET {{baseUrl}}/admin/complaints?priority=high&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Pengaduan Open & Prioritas High
+GET {{baseUrl}}/admin/complaints?status=open&priority=high&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Pengaduan Sedang Diproses
+GET {{baseUrl}}/admin/complaints?status=in_progress&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Pengaduan Terselesaikan
+GET {{baseUrl}}/admin/complaints?status=resolved&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Pengaduan Dieskalasi
+GET {{baseUrl}}/admin/complaints?status=escalated&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Cari Pengaduan
+GET {{baseUrl}}/admin/complaints?q=pembayaran&page=1&pageSize=20
+Authorization: Bearer {{token}}
+
+###
+
+### Detail Pengaduan (beserta balasan)
+GET {{baseUrl}}/admin/complaints/{{sampleComplaintId}}
+Authorization: Bearer {{token}}
+
+###
+
+### Update Status Pengaduan ke In Progress + Assign
+PATCH {{baseUrl}}/admin/complaints/{{sampleComplaintId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "in_progress",
+  "assigned_to": "{{adminId}}"
+}
+
+###
+
+### Naikkan Prioritas Pengaduan
+PATCH {{baseUrl}}/admin/complaints/{{sampleComplaintId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "priority": "high"
+}
+
+###
+
+### Eskalasi Pengaduan
+PATCH {{baseUrl}}/admin/complaints/{{sampleComplaintId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "escalated"
+}
+
+###
+
+### Selesaikan Pengaduan
+PATCH {{baseUrl}}/admin/complaints/{{sampleComplaintId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "resolved"
+}
+
+###
+
+### Balas Pengaduan - Pemberitahuan Awal
+POST {{baseUrl}}/admin/complaints/{{sampleComplaintId}}/replies
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "body": "Halo, kami telah menerima laporan Anda dan saat ini sedang menyelidiki masalah pembayaran yang Anda laporkan. Kami akan memberikan update dalam 1x24 jam. Terima kasih atas kesabaran Anda."
+}
+
+###
+
+### Balas Pengaduan - Update Progres
+POST {{baseUrl}}/admin/complaints/{{sampleComplaintId}}/replies
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "body": "Update: Kami telah berkoordinasi dengan tim keuangan. Proses transfer dana sedang dalam verifikasi dan akan diselesaikan dalam 2 hari kerja."
+}
+
+###
+
+### Balas Pengaduan - Penyelesaian
+POST {{baseUrl}}/admin/complaints/{{sampleComplaintId}}/replies
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "body": "Pengaduan Anda telah kami selesaikan. Dana sebesar Rp 7.500.000 telah berhasil ditransfer ke rekening Anda. Mohon konfirmasi jika sudah diterima. Terima kasih telah menggunakan layanan Panenara."
+}
