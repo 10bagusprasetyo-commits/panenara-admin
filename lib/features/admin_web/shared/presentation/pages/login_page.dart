@@ -3,8 +3,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
 import '../theme/admin_theme.dart';
 import '../widgets/panenara_logo.dart';
+import '../router/admin_router.dart';
+import '../../domain/entities/auth_entity.dart';
 import '../../data/auth_repository.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -18,8 +22,8 @@ class LoginPage extends ConsumerStatefulWidget {
 
 class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController(text: 'bagas@panenara.id');
+  final _passCtrl = TextEditingController(text: 'admin123');
   bool _obscure = true;
   bool _loading = false;
   String? _error;
@@ -39,16 +43,30 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     });
 
     try {
-      await ref.read(authRepositoryProvider).login(
+      final user = await ref.read(authRepositoryProvider).login(
             email: _emailCtrl.text.trim(),
             password: _passCtrl.text,
           );
-      // Router redirect will handle navigation after successful login
+      ref.invalidate(currentUserProvider);
+
+      if (mounted) {
+        if (user.role == AppRole.superAdmin) {
+          context.go(AdminRoutes.superAdminDashboard);
+        } else {
+          context.go(AdminRoutes.adminDashboard);
+        }
+      }
     } catch (e) {
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _fillAccount(String email, String password) {
+    _emailCtrl.text = email;
+    _passCtrl.text = password;
+    setState(() => _error = null);
   }
 
   @override
@@ -61,20 +79,43 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
+            constraints: const BoxConstraints(maxWidth: 440),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo
+                // Brand Header
                 Row(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    PanenaraLogo(width: 36, height: 54),
+                    const PanenaraLogo(width: 32, height: 48),
                     const SizedBox(width: 12),
-                    PanenBrand(subtitle: 'Panel Admin', onDark: isDark),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'PANENARA',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2,
+                            color: isDark ? Colors.white : AdminColors.g8,
+                          ),
+                        ),
+                        Text(
+                          'Panel Kontrol Terpadu',
+                          style: TextStyle(
+                            fontSize: 11,
+                            letterSpacing: 0.5,
+                            color: isDark
+                                ? AdminColors.mutDark
+                                : AdminColors.mutLight,
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
 
                 // Card
                 Container(
@@ -187,6 +228,55 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   ),
                                 )
                               : const Text('Masuk'),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Quick demo buttons
+                        const Divider(),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Pilih Akun Demo:',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white70 : Colors.black54,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => _fillAccount(
+                                  'bagas@panenara.id',
+                                  'admin123',
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                ),
+                                child: const Text(
+                                  'Super Admin',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => _fillAccount(
+                                  'rina@panenara.id',
+                                  'admin123',
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                ),
+                                child: const Text(
+                                  'Admin Ops',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

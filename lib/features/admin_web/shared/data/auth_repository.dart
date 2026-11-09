@@ -70,43 +70,57 @@ class MockAuthRepository implements AuthRepository {
       email: email,
       role: acct.role,
     );
-    await _storage.saveTokens(
-      accessToken: 'mock.${acct.id}',
-      refreshToken: 'mock-refresh.${acct.id}',
-    );
+    try {
+      await _storage.saveTokens(
+        accessToken: 'mock.${acct.id}',
+        refreshToken: 'mock-refresh.${acct.id}',
+      );
+    } catch (_) {
+      // Ignore secure storage errors in mock on web platforms
+    }
     return _user!;
   }
 
   @override
   Future<CurrentUser?> getMe() async {
-    await Future.delayed(const Duration(milliseconds: 150));
+    await Future.delayed(const Duration(milliseconds: 100));
     if (_user != null) return _user;
-    final token = await _storage.getAccessToken();
-    if (token == null || !token.startsWith('mock.')) return null;
-    final id = token.substring(5);
-    for (final e in _accounts.entries) {
-      if (e.value.id == id) {
-        _user = CurrentUser(
-          id: e.value.id,
-          name: e.value.name,
-          email: e.key,
-          role: e.value.role,
-        );
-        return _user;
+    try {
+      final token = await _storage.getAccessToken();
+      if (token == null || !token.startsWith('mock.')) return null;
+      final id = token.substring(5);
+      for (final e in _accounts.entries) {
+        if (e.value.id == id) {
+          _user = CurrentUser(
+            id: e.value.id,
+            name: e.value.name,
+            email: e.key,
+            role: e.value.role,
+          );
+          return _user;
+        }
       }
-    }
+    } catch (_) {}
     return null;
   }
 
   @override
   Future<void> logout() async {
     _user = null;
-    await _storage.clearTokens();
+    try {
+      await _storage.clearTokens();
+    } catch (_) {}
   }
 
   @override
-  Future<bool> isLoggedIn() async =>
-      (await _storage.getAccessToken()) != null;
+  Future<bool> isLoggedIn() async {
+    if (_user != null) return true;
+    try {
+      return (await _storage.getAccessToken()) != null;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 class _MockAccount {
@@ -189,9 +203,13 @@ final tokenStorageProvider = Provider<TokenStorage>((ref) {
   return TokenStorage(ref.watch(_secureStorageProvider));
 });
 
+final _mockAuthRepo = MockAuthRepository(
+  TokenStorage(const FlutterSecureStorage()),
+);
+
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final storage = ref.watch(tokenStorageProvider);
-  if (AppConfig.useMock) return MockAuthRepository(storage);
+  if (AppConfig.useMock) return _mockAuthRepo;
   return HttpAuthRepository(ApiClient.instance, storage);
 });
 
